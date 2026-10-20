@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-title" content="Scolarité">
 <meta name="theme-color" content="#ffffff">
 <title>Scolarité</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -343,13 +345,11 @@
 
   function chart(notes) {
     const mine = series(notes, 'note');
-    const cls = series(notes, 'classe');
     if (!mine.length) return '<p class="empty">Pas encore de notes</p>';
 
     const W = 320, H = 160, L = 26, R = 10, T = 10, B = 22;
-    const all = [...mine, ...cls];
-    const xmin = Math.min(...all.map((p) => p.x));
-    const xmax = Math.max(...all.map((p) => p.x));
+    const xmin = Math.min(...mine.map((p) => p.x));
+    const xmax = Math.max(...mine.map((p) => p.x));
     const span = xmax - xmin || 86400000 * 7;
     const X = (t) => L + ((t - xmin) / span) * (W - L - R);
     const Y = (v) => T + (1 - v / 20) * (H - T - B);
@@ -360,13 +360,11 @@
       s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/>`;
       s += `<text class="tick" x="${L - 7}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`;
     });
-    if (cls.length) s += `<path class="line-dash" d="${path(cls)}"/>`;
     s += `<path class="line" d="${path(mine)}"/>`;
     s += mine.map((p) => `<circle class="dot" cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="3.5"/>`).join('');
     s += `<text class="tick" x="${L}" y="${H - 5}">${fmtShort(xmin)}</text>`;
     s += `<text class="tick" x="${W - R}" y="${H - 5}" text-anchor="end">${fmtShort(xmax)}</text>`;
     s += '</svg>';
-    s += '<div class="legend"><span><i></i>Moi</span><span><i class="d"></i>Classe</span></div>';
     return s;
   }
 
@@ -406,7 +404,7 @@
         out += `
         <div class="slot">
           <span class="time">${esc(c.time || '')}</span>
-          <span class="grow"><span><span class="tag">Colle</span></span><span>${esc(c.subject)}</span>${c.colleur ? `<span class="meta">${esc(c.colleur)}</span>` : ''}</span>
+          <span class="grow"><span><span class="tag">Colle</span></span><span>${esc(c.subject)}</span>${(c.colleur || c.salle) ? `<span class="meta">${[c.colleur, c.salle ? 'Salle ' + c.salle : ''].filter(Boolean).map(esc).join(' · ')}</span>` : ''}</span>
           <button class="del" type="button" data-del="colles" data-id="${c.id}" aria-label="Supprimer">×</button>
         </div>`;
       });
@@ -467,17 +465,15 @@
       .map((s) => {
         const list = bySub[s].sort((a, b) => a.date.localeCompare(b.date));
         const mine = mean(list.map((n) => n.note));
-        const cls = mean(list.filter((n) => typeof n.classe === 'number').map((n) => n.classe));
         return `
       <div class="card">
         <div class="subj-head"><span>${esc(s)}</span><span>${fmtNum(mine)}/20</span></div>
-        <p class="meta" style="margin-bottom:12px">Moyenne de classe : ${cls === null ? '—' : fmtNum(cls) + '/20'}</p>
-        ${chart(list)}
+        <div style="margin-top:12px">${chart(list)}</div>
         <div style="margin-top:14px">
           ${list.slice().reverse().map((n) => `
           <div class="nrow">
             <span class="grow">${fmtLong(n.date)}</span>
-            <span>${fmtNum(n.note)}/20${typeof n.classe === 'number' ? ` <span class="meta" style="display:inline">· classe ${fmtNum(n.classe)}</span>` : ''}</span>
+            <span>${fmtNum(n.note)}/20</span>
             <button class="del" type="button" data-del="notes" data-id="${n.id}" aria-label="Supprimer">×</button>
           </div>`).join('')}
         </div>
@@ -500,7 +496,6 @@
         { name:'subject', label:'Matière', type:'text', list:true, required:true },
         { name:'date', label:'Date', type:'date', required:true, def:'today' },
         { name:'note', label:'Ma note /20', type:'text', inputmode:'decimal', required:true },
-        { name:'classe', label:'Moyenne de classe /20', type:'text', inputmode:'decimal' },
       ],
     },
     colle: {
@@ -510,6 +505,7 @@
         { name:'time', label:'Heure', type:'time' },
         { name:'subject', label:'Matière', type:'text', list:true, required:true },
         { name:'colleur', label:'Colleur', type:'text' },
+        { name:'salle', label:'Salle', type:'text' },
       ],
     },
   };
