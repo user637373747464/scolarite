@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Scolarité">
+<meta name="theme-color" content="#ffffff">
+<title>Scolarité</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#ffffff; --ink:#000000; --card:#f2f2f2;
+    --mute:rgba(0,0,0,.5); --line:rgba(0,0,0,.1);
+  }
+  [data-theme="dark"] {
+    --bg:#000000; --ink:#ffffff; --card:#1c1c1e;
+    --mute:rgba(255,255,255,.5); --line:rgba(255,255,255,.12);
+  }
+
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); }
+  body {
+    font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+    padding:env(safe-area-inset-top) 0 calc(110px + env(safe-area-inset-bottom));
+  }
+  main { max-width:640px; margin:0 auto; }
+
+  header { display:flex; justify-content:space-between; align-items:center; padding:18px 20px 12px; }
+  h1 { margin:0; font-size:30px; font-weight:800; letter-spacing:-.01em; }
+
+  .pill {
+    font:inherit; font-size:14px; font-weight:700; cursor:pointer;
+    color:var(--ink); background:var(--card); border:0; border-radius:999px; padding:9px 16px;
+  }
+  .pill.solid { background:var(--ink); color:var(--bg); }
+  .round {
+    font:inherit; font-size:20px; font-weight:700; cursor:pointer; line-height:1;
+    width:40px; height:40px; border-radius:50%; border:0; background:var(--card); color:var(--ink);
+  }
+
+  #tabs { display:flex; gap:4px; background:var(--card); border-radius:999px; padding:4px; margin:0 20px 8px; }
+  #tabs button {
+    flex:1; font:inherit; font-size:14px; font-weight:700; cursor:pointer;
+    background:transparent; color:var(--mute); border:0; border-radius:999px; padding:10px 0;
+  }
+  #tabs button[aria-selected="true"] { background:var(--ink); color:var(--bg); }
+
+  .pager { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; }
+  .pager::-webkit-scrollbar { display:none; }
+  .page { flex:0 0 100%; min-width:0; scroll-snap-align:start; padding:8px 20px 24px; }
+
+  .card { background:var(--card); border-radius:28px; padding:22px; margin-bottom:14px; }
+  .label { margin:0 0 4px; font-size:13px; font-weight:700; color:var(--mute); }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .big { margin:2px 0 14px; font-size:58px; font-weight:800; letter-spacing:-.03em; line-height:1; }
+  .big small { font-size:20px; font-weight:700; color:var(--mute); letter-spacing:0; }
+  .meta { font-size:13px; opacity:.55; margin:0; }
+  .empty { font-size:15px; opacity:.55; margin:6px 0; }
+
+  .chart { width:100%; height:auto; display:block; }
+  .chart .grid { stroke:var(--line); stroke-width:1; stroke-dasharray:2 5; stroke-linecap:round; }
+  .chart .tick { font-size:10px; font-weight:600; fill:var(--mute); }
+  .chart .line { fill:none; stroke:var(--ink); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+  .chart .line-dash { fill:none; stroke:var(--mute); stroke-width:2; stroke-dasharray:1 6; stroke-linecap:round; }
+  .chart .dot { fill:var(--ink); }
+  .legend { display:flex; gap:16px; font-size:12px; font-weight:600; color:var(--mute); margin-top:8px; }
+  .legend i { display:inline-block; width:18px; border-top:3px solid var(--ink); border-radius:3px; vertical-align:middle; margin-right:6px; }
+  .legend i.d { border-top:3px dotted var(--mute); }
+
+  /* Emploi du temps */
+  .weeknav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:2px 0 16px; }
+  .weektitle { text-align:center; flex:1; }
+  .weektitle strong { display:block; font-size:19px; font-weight:800; }
+  .weektitle button { margin-top:6px; }
+  .daylabel { margin:20px 6px 8px; font-size:14px; font-weight:800; display:flex; justify-content:space-between; }
+  .daylabel span:last-child { font-weight:600; color:var(--mute); }
+  .daycard { background:var(--card); border-radius:24px; padding:6px 18px; }
+  .daycard.today { background:var(--ink); color:var(--bg); --line:rgba(128,128,128,.4); }
+  .slot { display:flex; gap:14px; padding:13px 0; align-items:flex-start; }
+  .slot + .slot { box-shadow:inset 0 1px 0 var(--line); }
+  .time { flex:none; width:88px; font-size:13px; font-weight:700; opacity:.55; padding-top:2px; }
+  .grow { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; font-weight:700; }
+  .grow .meta { font-weight:600; }
+  .tag { display:inline-block; align-self:flex-start; font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; border:1.5px solid currentColor; margin-bottom:3px; }
+  .del { flex:none; font:inherit; font-size:18px; line-height:1; background:transparent; color:inherit; opacity:.45; border:0; cursor:pointer; padding:0 2px; }
+  .none { padding:14px 0; font-size:15px; opacity:.55; font-weight:600; }
+
+  /* Matières */
+  .subj-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; }
+  .subj-head span:first-child { font-size:21px; font-weight:800; }
+  .subj-head span:last-child { font-size:18px; font-weight:800; }
+  .nrow { display:flex; align-items:center; gap:10px; padding:11px 0; box-shadow:inset 0 1px 0 var(--line); font-weight:700; }
+  .nrow .grow { font-weight:600; }
+
+  /* Barre du bas */
+  .bar {
+    position:fixed; left:50%; transform:translateX(-50%);
+    bottom:calc(16px + env(safe-area-inset-bottom));
+    display:flex; gap:4px; padding:5px; border-radius:999px;
+    background:var(--ink); box-shadow:0 8px 30px rgba(0,0,0,.25);
+  }
+  .bar button {
+    font:inherit; font-size:15px; font-weight:800; cursor:pointer;
+    background:transparent; color:var(--bg); border:0; border-radius:999px; padding:13px 26px;
+    white-space:nowrap;
+  }
+  .bar button:active { background:rgba(128,128,128,.4); }
+
+  /* Fenêtre d'ajout */
+  dialog {
+    background:var(--card); color:var(--ink); border:0; border-radius:32px;
+    width:min(92vw, 400px); padding:26px; margin:auto;
+  }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  dialog h3 { margin:0 0 18px; font-size:24px; font-weight:800; }
+  form { display:flex; flex-direction:column; gap:14px; }
+  label { display:flex; flex-direction:column; gap:7px; font-size:13px; font-weight:700; color:var(--mute); }
+  input {
+    font:inherit; font-size:17px; font-weight:600; color:var(--ink);
+    background:var(--bg); border:0; border-radius:16px; padding:13px 16px; outline:none; min-height:48px;
+    color-scheme:light dark;
+  }
+  .actions { display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Scolarité</h1>
+    <button id="theme" class="pill" type="button">Sombre</button>
+  </header>
+
+  <nav id="tabs">
+    <button type="button" data-go="0" aria-selected="true">Accueil</button>
+    <button type="button" data-go="1" aria-selected="false">Semaine</button>
+    <button type="button" data-go="2" aria-selected="false">Matières</button>
+  </nav>
+
+  <div id="pager" class="pager">
+    <!-- Page 1 : moyenne générale + EDT du jour -->
+    <section class="page">
+      <div class="card">
+        <p class="label">Moyenne générale</p>
+        <p id="general-value" class="big"></p>
+        <div id="general-chart"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom:6px">
+          <p class="label" style="margin:0">Aujourd'hui</p>
+          <span id="today-date" class="meta"></span>
+        </div>
+        <div id="today"></div>
+      </div>
+    </section>
+
+    <!-- Page 2 : semaine par semaine -->
+    <section class="page">
+      <div class="weeknav">
+        <button class="round" type="button" data-nav="-1" aria-label="Semaine précédente">‹</button>
+        <div class="weektitle">
+          <strong id="week-title"></strong>
+          <button id="week-type" class="pill" type="button" data-flip aria-label="Changer A/B"></button>
+        </div>
+        <button class="round" type="button" data-nav="1" aria-label="Semaine suivante">›</button>
+      </div>
+      <div id="week"></div>
+      <div style="text-align:center; margin-top:18px">
+        <button id="week-reset" class="pill" type="button" data-nav="0" hidden>Revenir à aujourd'hui</button>
+      </div>
+    </section>
+
+    <!-- Page 3 : moyennes par matière -->
+    <section class="page">
+      <div id="subjects"></div>
+    </section>
+  </div>
+</main>
+
+<div class="bar">
+  <button type="button" data-add="note">+ Note</button>
+  <button type="button" data-add="colle">+ Colle</button>
+</div>
+
+<dialog id="dlg"><form id="form"></form></dialog>
+<datalist id="subjects-list"></datalist>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const KEY = 'scolarite.v1';
+  const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const SUBJECTS = ['Mathématiques', 'Physique-chimie', 'SI', 'ITC', 'Français-philosophie', 'Anglais', 'Option'];
+  const A_B_ANCHOR = '2026-09-07'; // lundi de la semaine considérée comme "A" par défaut
+
+  // ----- Emploi du temps, groupe 2 (sans espagnol ni EPS) -----
+  // week : 'AB' = toutes les semaines, 'A' ou 'B' = une semaine sur deux
+  const EDT = [
+    { day:0, start:'07:10', end:'09:05', subject:'Mathématiques', detail:'Legeais · 305', week:'AB' },
+    { day:0, start:'09:25', end:'11:20', subject:'Physique-chimie', detail:'Caballero', week:'A' },
+    { day:0, start:'09:25', end:'11:20', subject:'SI', detail:'Boisdur · 325', week:'B' },
+    { day:0, start:'13:25', end:'15:20', subject:'Français-philosophie', detail:'Debbiche · 305', week:'AB' },
+
+    { day:1, start:'07:10', end:'09:05', subject:'Mathématiques', detail:'Legeais · 305', week:'AB' },
+    { day:1, start:'09:25', end:'11:20', subject:'Physique-chimie', detail:'Caballero · 305', week:'AB' },
+    { day:1, start:'13:25', end:'15:20', subject:'Physique-chimie TD', detail:'Caballero · 327', week:'B' },
+    { day:1, start:'13:25', end:'15:20', subject:'SI TD', detail:'Boisdur · 325', week:'A' },
+    { day:1, start:'15:25', end:'17:20', subject:'Mathématiques TD', detail:'Legeais · 305', week:'AB' },
+
+    { day:2, start:'07:10', end:'09:05', subject:'Mathématiques', detail:'Legeais · 305', week:'AB' },
+    { day:2, start:'13:25', end:'15:20', subject:'Physique-chimie TP', detail:'Caballero · 339, 323 ou 333', week:'AB' },
+
+    { day:3, start:'07:10', end:'09:05', subject:'Mathématiques', detail:'Legeais · 305', week:'AB' },
+    { day:3, start:'09:25', end:'11:20', subject:'Anglais', detail:'Damo / Clerc · 305', week:'AB' },
+    { day:3, start:'13:25', end:'14:50', subject:'ITC TP', detail:'Moll · 322', week:'A' },
+
+    { day:4, start:'07:10', end:'09:05', subject:'Mathématiques', detail:'Legeais · 305', week:'AB' },
+    { day:4, start:'09:25', end:'11:20', subject:'Physique-chimie', detail:'Caballero · 305', week:'AB' },
+  ];
+
+  // ----- Planning des DS (samedi). Libellé vide = non précisé -----
+  const DS_PLAN = {
+    '2026-09-05':'Mathématiques (2h) / Français-philosophie (2h)',
+    '2026-09-12':'Mathématiques (4h)',
+    '2026-09-19':'Physique-chimie (4h)',
+    '2026-09-26':'Mathématiques (4h)',
+    '2026-10-03':'LV (2h) / Physique-chimie (2h)',
+    '2026-10-10':'SI (2h) / Mathématiques (2h)',
+    '2026-10-17':'Français-philosophie (4h)',
+    '2026-10-24':'Vacances de Toussaint',
+    '2026-10-31':'Vacances de Toussaint',
+    '2026-11-07':'Physique-chimie (4h)',
+    '2026-11-14':'Mathématiques (4h)',
+    '2026-11-21':'Physique-chimie (4h)',
+    '2026-11-28':'SI (2h) / ITC (2h)',
+    '2026-12-05':'Mathématiques (4h)',
+    '2026-12-12':'Français-philosophie (4h)',
+    '2026-12-19':'LV (1h30) / Physique-chimie (2h30)',
+    '2026-12-26':'Vacances de Noël',
+    '2027-01-02':'Vacances de Noël',
+    '2027-01-09':'SI (4h)',
+    '2027-01-16':'ITC (2h) / Mathématiques (2h)',
+    '2027-01-23':'ITC (2h) / Mathématiques (2h)',
+    '2027-01-30':'',
+    '2027-02-06':'LV (3h)',
+    '2027-02-13':'Vacances de Carnaval',
+    '2027-02-20':'Vacances de Carnaval',
+    '2027-02-27':'Français-philosophie (4h)',
+    '2027-03-06':'Mathématiques (4h)',
+    '2027-03-13':'Option (4h)',
+    '2027-03-20':'Physique-chimie (4h)',
+    '2027-03-27':'Vacances de Pâques',
+    '2027-04-03':'Vacances de Pâques',
+    '2027-04-10':'Vacances de Pâques',
+    '2027-04-17':'Français-philosophie (4h)',
+    '2027-04-24':'LV (3h)',
+    '2027-05-01':'',
+    '2027-05-08':'',
+    '2027-05-15':'Option (4h)',
+    '2027-05-22':'Mathématiques (2h) / Physique-chimie (2h)',
+    '2027-05-29':'Pas de DS (concours blanc la semaine suivante)',
+    '2027-06-05':'Pas de DS (semaine du concours blanc)',
+    '2027-06-12':'',
+    '2027-06-19':'',
+    '2027-06-26':'',
+  };
+
+  // ----- Données (colles, notes) -----
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  function load() {
+    const base = { notes: [], colles: [], flip: 0 };
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY));
+      if (d) return { ...base, ...d };
+    } catch (e) {}
+    return base;
+  }
+  let data = load();
+  let weekOffset = 0;
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  // ----- Dates et formats -----
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+  function isoDay(d) {
+    const z = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return z.toISOString().slice(0, 10);
+  }
+  const noon = (iso) => new Date(iso + 'T12:00');
+  const todayISO = () => isoDay(new Date());
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const fmtLong = (iso) => cap(noon(iso).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }));
+  const fmtDM = (d) => d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+  const fmtShort = (t) => fmtDM(new Date(t));
+  const fmtNum = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
+  const mean = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
+
+  function mondayOf(d) {
+    const x = new Date(d);
+    x.setHours(12, 0, 0, 0);
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+    return x;
+  }
+  function weekMonday(offset) {
+    const m = mondayOf(new Date());
+    m.setDate(m.getDate() + offset * 7);
+    return m;
+  }
+  function weekDates(monday) {
+    return DAYS.map((_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return isoDay(d);
+    });
+  }
+  function weekType(monday) {
+    const n = Math.round((monday - noon(A_B_ANCHOR)) / (7 * 86400000));
+    return (((n + data.flip) % 2) + 2) % 2 === 0 ? 'A' : 'B';
+  }
+  function vacationOf(dates) {
+    const label = DS_PLAN[dates[5]];
+    return label && /^Vacances/.test(label) ? label : '';
+  }
+
+  // ----- Graphiques (SVG, noir et blanc) -----
+  function series(notes, key) {
+    const list = notes
+      .filter((n) => typeof n[key] === 'number')
+      .sort((a, b) => a.date.localeCompare(b.date));
+    let sum = 0;
+    return list.map((n, i) => {
+      sum += n[key];
+      return { x: noon(n.date).getTime(), y: sum / (i + 1) };
+    });
+  }
+
+  function chart(notes) {
+    const mine = series(notes, 'note');
+    const cls = series(notes, 'classe');
+    if (!mine.length) return '<p class="empty">Pas encore de notes</p>';
+
+    const W = 320, H = 160, L = 26, R = 10, T = 10, B = 22;
+    const all = [...mine, ...cls];
+    const xmin = Math.min(...all.map((p) => p.x));
+    const xmax = Math.max(...all.map((p) => p.x));
+    const span = xmax - xmin || 86400000 * 7;
+    const X = (t) => L + ((t - xmin) / span) * (W - L - R);
+    const Y = (v) => T + (1 - v / 20) * (H - T - B);
+    const path = (pts) => pts.map((p, i) => (i ? 'L' : 'M') + X(p.x).toFixed(1) + ' ' + Y(p.y).toFixed(1)).join(' ');
+
+    let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Graphique de moyenne">`;
+    [0, 10, 20].forEach((v) => {
+      s += `<line class="grid" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/>`;
+      s += `<text class="tick" x="${L - 7}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`;
+    });
+    if (cls.length) s += `<path class="line-dash" d="${path(cls)}"/>`;
+    s += `<path class="line" d="${path(mine)}"/>`;
+    s += mine.map((p) => `<circle class="dot" cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="3.5"/>`).join('');
+    s += `<text class="tick" x="${L}" y="${H - 5}">${fmtShort(xmin)}</text>`;
+    s += `<text class="tick" x="${W - R}" y="${H - 5}" text-anchor="end">${fmtShort(xmax)}</text>`;
+    s += '</svg>';
+    s += '<div class="legend"><span><i></i>Moi</span><span><i class="d"></i>Classe</span></div>';
+    return s;
+  }
+
+  // ----- Contenu d'une journée : cours, colles, DS -----
+  function dayHTML(iso, idx, type, vacation) {
+    let out = '';
+
+    if (!vacation) {
+      EDT.filter((s) => s.day === idx && (s.week === 'AB' || s.week === type))
+        .sort((a, b) => a.start.localeCompare(b.start))
+        .forEach((s) => {
+          out += `
+        <div class="slot">
+          <span class="time">${s.start}–${s.end}</span>
+          <span class="grow"><span>${esc(s.subject)}</span><span class="meta">${esc(s.detail)}</span></span>
+        </div>`;
+        });
+
+      if (idx === 5) {
+        const ds = DS_PLAN[iso];
+        if (ds) {
+          const none = /^Pas de DS/.test(ds);
+          out += `
+        <div class="slot">
+          <span class="time">${none ? '' : '07:10–11:20'}</span>
+          <span class="grow">
+            ${none ? `<span>${esc(ds)}</span>` : `<span><span class="tag">DS</span></span><span>${esc(ds)}</span><span class="meta">Salle polyvalente</span>`}
+          </span>
+        </div>`;
+        }
+      }
+    }
+
+    data.colles.filter((c) => c.date === iso)
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''))
+      .forEach((c) => {
+        out += `
+        <div class="slot">
+          <span class="time">${esc(c.time || '')}</span>
+          <span class="grow"><span><span class="tag">Colle</span></span><span>${esc(c.subject)}</span>${c.colleur ? `<span class="meta">${esc(c.colleur)}</span>` : ''}</span>
+          <button class="del" type="button" data-del="colles" data-id="${c.id}" aria-label="Supprimer">×</button>
+        </div>`;
+      });
+
+    if (!out) {
+      out = `<div class="none">${vacation ? esc(vacation) : 'Rien de prévu'}</div>`;
+    }
+    return out;
+  }
+
+  // ----- Affichage -----
+  function renderHome() {
+    const notes = data.notes;
+    $('#general-value').innerHTML = notes.length
+      ? fmtNum(mean(notes.map((n) => n.note))) + '<small> /20</small>'
+      : '—';
+    $('#general-chart').innerHTML = chart(notes);
+  }
+
+  function renderToday() {
+    const now = new Date();
+    const iso = todayISO();
+    $('#today-date').textContent = fmtLong(iso);
+    const idx = (now.getDay() + 6) % 7;
+    if (idx > 5) { $('#today').innerHTML = '<p class="empty">Dimanche, jour de repos</p>'; return; }
+    const monday = mondayOf(now);
+    const dates = weekDates(monday);
+    $('#today').innerHTML = dayHTML(iso, idx, weekType(monday), vacationOf(dates));
+  }
+
+  function renderWeek() {
+    const monday = weekMonday(weekOffset);
+    const dates = weekDates(monday);
+    const type = weekType(monday);
+    const vacation = vacationOf(dates);
+    const sat = new Date(monday); sat.setDate(monday.getDate() + 5);
+
+    $('#week-title').textContent = `${fmtDM(monday)} – ${fmtDM(sat)}`;
+    $('#week-type').textContent = vacation ? 'Vacances' : `Semaine ${type}`;
+    $('#week-reset').hidden = weekOffset === 0;
+
+    const today = todayISO();
+    $('#week').innerHTML = DAYS.map((name, i) => {
+      const d = noon(dates[i]);
+      return `
+      <div class="daylabel"><span>${name}</span><span>${d.getDate()} ${d.toLocaleDateString('fr-FR', { month:'short' })}</span></div>
+      <div class="daycard ${dates[i] === today ? 'today' : ''}">${dayHTML(dates[i], i, type, vacation)}</div>`;
+    }).join('');
+  }
+
+  function renderSubjects() {
+    const el = $('#subjects');
+    if (!data.notes.length) { el.innerHTML = '<div class="card"><p class="empty">Aucune note pour l\'instant</p></div>'; return; }
+    const bySub = {};
+    data.notes.forEach((n) => { (bySub[n.subject] ||= []).push(n); });
+    el.innerHTML = Object.keys(bySub)
+      .sort((a, b) => a.localeCompare(b, 'fr'))
+      .map((s) => {
+        const list = bySub[s].sort((a, b) => a.date.localeCompare(b.date));
+        const mine = mean(list.map((n) => n.note));
+        const cls = mean(list.filter((n) => typeof n.classe === 'number').map((n) => n.classe));
+        return `
+      <div class="card">
+        <div class="subj-head"><span>${esc(s)}</span><span>${fmtNum(mine)}/20</span></div>
+        <p class="meta" style="margin-bottom:12px">Moyenne de classe : ${cls === null ? '—' : fmtNum(cls) + '/20'}</p>
+        ${chart(list)}
+        <div style="margin-top:14px">
+          ${list.slice().reverse().map((n) => `
+          <div class="nrow">
+            <span class="grow">${fmtLong(n.date)}</span>
+            <span>${fmtNum(n.note)}/20${typeof n.classe === 'number' ? ` <span class="meta" style="display:inline">· classe ${fmtNum(n.classe)}</span>` : ''}</span>
+            <button class="del" type="button" data-del="notes" data-id="${n.id}" aria-label="Supprimer">×</button>
+          </div>`).join('')}
+        </div>
+      </div>`;
+      }).join('');
+  }
+
+  function render() {
+    renderHome();
+    renderToday();
+    renderWeek();
+    renderSubjects();
+  }
+
+  // ----- Formulaires -----
+  const FORMS = {
+    note: {
+      title: 'Nouvelle note', bucket: 'notes',
+      fields: [
+        { name:'subject', label:'Matière', type:'text', list:true, required:true },
+        { name:'date', label:'Date', type:'date', required:true, def:'today' },
+        { name:'note', label:'Ma note /20', type:'text', inputmode:'decimal', required:true },
+        { name:'classe', label:'Moyenne de classe /20', type:'text', inputmode:'decimal' },
+      ],
+    },
+    colle: {
+      title: 'Nouvelle colle', bucket: 'colles',
+      fields: [
+        { name:'date', label:'Date', type:'date', required:true, def:'today' },
+        { name:'time', label:'Heure', type:'time' },
+        { name:'subject', label:'Matière', type:'text', list:true, required:true },
+        { name:'colleur', label:'Colleur', type:'text' },
+      ],
+    },
+  };
+
+  const dlg = $('#dlg');
+  const form = $('#form');
+
+  function openForm(kind) {
+    const cfg = FORMS[kind];
+    form.dataset.kind = kind;
+    form.innerHTML = `<h3>${cfg.title}</h3>` +
+      cfg.fields.map((f) => `<label>${f.label}<input name="${f.name}" type="${f.type}"
+        ${f.required ? 'required' : ''} ${f.inputmode ? `inputmode="${f.inputmode}"` : ''}
+        ${f.list ? 'list="subjects-list"' : ''} autocomplete="off"></label>`).join('') +
+      `<div class="actions">
+         <button type="button" class="pill" data-close>Annuler</button>
+         <button type="submit" class="pill solid">Ajouter</button>
+       </div>`;
+    cfg.fields.forEach((f) => { if (f.def === 'today') form.elements[f.name].value = todayISO(); });
+    dlg.showModal();
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const cfg = FORMS[form.dataset.kind];
+    const item = { id: uid(), created: Date.now() };
+
+    for (const f of cfg.fields) {
+      const raw = form.elements[f.name].value.trim();
+      if (f.inputmode === 'decimal') {
+        if (raw === '') { item[f.name] = null; continue; }
+        const n = parseFloat(raw.replace(',', '.'));
+        if (!(n >= 0 && n <= 20)) { form.elements[f.name].focus(); return; }
+        item[f.name] = n;
+      } else {
+        item[f.name] = raw;
+      }
+    }
+
+    data[cfg.bucket].push(item);
+    save();
+    render();
+    dlg.close();
+  });
+
+  // ----- Clics -----
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close]')) { dlg.close(); return; }
+
+    const add = e.target.closest('[data-add]');
+    if (add) { openForm(add.dataset.add); return; }
+
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      const bucket = del.dataset.del;
+      data[bucket] = data[bucket].filter((x) => x.id !== del.dataset.id);
+      save(); render(); return;
+    }
+
+    const nav = e.target.closest('[data-nav]');
+    if (nav) {
+      const v = Number(nav.dataset.nav);
+      weekOffset = v === 0 ? 0 : weekOffset + v;
+      renderWeek(); return;
+    }
+
+    if (e.target.closest('[data-flip]')) {
+      data.flip = data.flip ? 0 : 1;
+      save(); render(); return;
+    }
+
+    const go = e.target.closest('[data-go]');
+    if (go) {
+      const p = $('#pager');
+      p.scrollTo({ left: Number(go.dataset.go) * p.clientWidth, behavior: 'smooth' });
+    }
+  });
+
+  $('#pager').addEventListener('scroll', () => {
+    const p = $('#pager');
+    const i = Math.round(p.scrollLeft / p.clientWidth);
+    document.querySelectorAll('#tabs button').forEach((b, k) => b.setAttribute('aria-selected', k === i));
+  }, { passive: true });
+
+  // ----- Thème clair / sombre -----
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    $('#theme').textContent = t === 'dark' ? 'Clair' : 'Sombre';
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = t === 'dark' ? '#000000' : '#ffffff';
+  }
+  let startTheme = null;
+  try { startTheme = localStorage.getItem('scolarite.theme'); } catch (e) {}
+  applyTheme(startTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('#theme').addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('scolarite.theme', next); } catch (e) {}
+    applyTheme(next);
+  });
+
+  $('#subjects-list').innerHTML = SUBJECTS.map((s) => `<option value="${esc(s)}">`).join('');
+
+  render();
+</script>
+</body>
+</html>
