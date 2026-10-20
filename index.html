@@ -332,19 +332,22 @@
   }
 
   // ----- Graphiques (SVG, noir et blanc) -----
-  function series(notes, key) {
+  // Une note sur 10, sur 40... est ramenée sur 20 pour les moyennes et les graphes
+  const on20 = (n) => (n.note / (n.max || 20)) * 20;
+
+  function series(notes) {
     const list = notes
-      .filter((n) => typeof n[key] === 'number')
+      .filter((n) => typeof n.note === 'number')
       .sort((a, b) => a.date.localeCompare(b.date));
     let sum = 0;
     return list.map((n, i) => {
-      sum += n[key];
+      sum += on20(n);
       return { x: noon(n.date).getTime(), y: sum / (i + 1) };
     });
   }
 
   function chart(notes) {
-    const mine = series(notes, 'note');
+    const mine = series(notes);
     if (!mine.length) return '<p class="empty">Pas encore de notes</p>';
 
     const W = 320, H = 160, L = 26, R = 10, T = 10, B = 22;
@@ -419,7 +422,7 @@
   function renderHome() {
     const notes = data.notes;
     $('#general-value').innerHTML = notes.length
-      ? fmtNum(mean(notes.map((n) => n.note))) + '<small> /20</small>'
+      ? fmtNum(mean(notes.map(on20))) + '<small> /20</small>'
       : '—';
     $('#general-chart').innerHTML = chart(notes);
   }
@@ -464,7 +467,7 @@
       .sort((a, b) => a.localeCompare(b, 'fr'))
       .map((s) => {
         const list = bySub[s].sort((a, b) => a.date.localeCompare(b.date));
-        const mine = mean(list.map((n) => n.note));
+        const mine = mean(list.map(on20));
         return `
       <div class="card">
         <div class="subj-head"><span>${esc(s)}</span><span>${fmtNum(mine)}/20</span></div>
@@ -473,7 +476,7 @@
           ${list.slice().reverse().map((n) => `
           <div class="nrow">
             <span class="grow">${fmtLong(n.date)}</span>
-            <span>${fmtNum(n.note)}/20</span>
+            <span>${fmtNum(n.note)}/${fmtNum(n.max || 20)}</span>
             <button class="del" type="button" data-del="notes" data-id="${n.id}" aria-label="Supprimer">×</button>
           </div>`).join('')}
         </div>
@@ -495,7 +498,8 @@
       fields: [
         { name:'subject', label:'Matière', type:'text', list:true, required:true },
         { name:'date', label:'Date', type:'date', required:true, def:'today' },
-        { name:'note', label:'Ma note /20', type:'text', inputmode:'decimal', required:true },
+        { name:'note', label:'Ma note', type:'text', inputmode:'decimal', required:true },
+        { name:'max', label:'Sur combien ? (20, 10, 40…)', type:'text', inputmode:'decimal', required:true, def:'20' },
       ],
     },
     colle: {
@@ -524,7 +528,10 @@
          <button type="button" class="pill" data-close>Annuler</button>
          <button type="submit" class="pill solid">Ajouter</button>
        </div>`;
-    cfg.fields.forEach((f) => { if (f.def === 'today') form.elements[f.name].value = todayISO(); });
+    cfg.fields.forEach((f) => {
+      if (f.def === 'today') form.elements[f.name].value = todayISO();
+      else if (f.def) form.elements[f.name].value = f.def;
+    });
     dlg.showModal();
   }
 
@@ -538,10 +545,21 @@
       if (f.inputmode === 'decimal') {
         if (raw === '') { item[f.name] = null; continue; }
         const n = parseFloat(raw.replace(',', '.'));
-        if (!(n >= 0 && n <= 20)) { form.elements[f.name].focus(); return; }
+        if (!(n >= 0)) { form.elements[f.name].focus(); return; }
         item[f.name] = n;
       } else {
         item[f.name] = raw;
+      }
+    }
+
+    if (cfg.bucket === 'notes') {
+      const bad = !(item.max > 0) ? 'max' : item.note > item.max ? 'note' : null;
+      if (bad) {
+        const el = form.elements[bad];
+        el.setCustomValidity(bad === 'max' ? 'Le « sur » doit être supérieur à 0' : `La note ne peut pas dépasser ${fmtNum(item.max)}`);
+        el.reportValidity();
+        el.addEventListener('input', () => el.setCustomValidity(''), { once: true });
+        return;
       }
     }
 
